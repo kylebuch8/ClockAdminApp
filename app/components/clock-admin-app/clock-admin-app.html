@@ -1,15 +1,35 @@
 <link rel="import" href="../../bower_components/polymer/polymer.html">
+<script src="../../bower_components/socket.io-client/socket.io.js"></script>
 
 <dom-module id="clock-admin-app">
     <template>
         <h1>Clock Admin App</h1>
+        <div>Date: <input type="date" value="{{date::input}}"></div>
+        <div>Time: <input type="text" value="{{time::input}}"></div>
+        <button on-tap="addAlarm">Add Alarm</button>
     </template>
 </dom-module>
 
 <script>
 
+    var socket;
+
     Polymer({
-        is: 'clock-admin-app'
+        is: 'clock-admin-app',
+
+        created: function () {
+            socket = io('http://localhost:8080');
+
+            socket.on('alarm', function (data) {
+                console.log(new Date(data.date));
+            });
+        },
+
+        addAlarm: function () {
+            socket.emit('createAlarm', {
+                date: new Date(this.date + 'T' + this.time + ':00')
+            });
+        }
     });
 
 </script>
