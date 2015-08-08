@@ -11,7 +11,10 @@
 
         <template is="dom-repeat" items="{{alarms}}">
             <ul>
-                <li><span>{{item.formattedDate}}</span> at <span>{{item.formattedTime}}</span></li>
+                <li>
+                    <span>{{item.formattedDate}}</span> at <span>{{item.formattedTime}}</span>
+                    <button on-tap="deleteAlarm">Delete</button>
+                </li>
             </ul>
         </template>
     </template>
@@ -39,10 +42,23 @@
                 var date = moment(data.date);
 
                 self.unshift('alarms', {
+                    id: data.id,
                     date: date,
                     formattedDate: date.format('MM-DD-YYYY'),
                     formattedTime: date.format('hh:mm a')
                 });
+            });
+
+            socket.on('deleteAlarm', function (data) {
+                var i = 0,
+                    length = self.alarms.length;
+
+                for (i; i < length; i += 1) {
+                    if (self.alarms[i].id === data.id) {
+                        self.splice('alarms', i);
+                        break;
+                    }
+                }
             });
 
             this.checkAlarms();
@@ -61,7 +77,7 @@
 
                     self.alarms.forEach(function (alarm, index) {
                         if (alarm.date.diff(now) <= 0) {
-                            self.removeAlarm(index);
+                            self.splice('alarms', index);
                         }
                     });
                 }
@@ -74,8 +90,10 @@
             });
         },
 
-        removeAlarm: function (index) {
-            this.splice('alarms', index);
+        deleteAlarm: function (event) {
+            socket.emit('deleteAlarm', {
+                id: event.model.item.id
+            });
         }
     });
 
