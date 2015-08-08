@@ -1,5 +1,6 @@
 <link rel="import" href="../../bower_components/polymer/polymer.html">
 <script src="../../bower_components/socket.io-client/socket.io.js"></script>
+<script src="../../bower_components/moment/moment.js"></script>
 
 <dom-module id="clock-admin-app">
     <template>
@@ -7,6 +8,12 @@
         <div>Date: <input type="date" value="{{date::input}}"></div>
         <div>Time: <input type="text" value="{{time::input}}"></div>
         <button on-tap="addAlarm">Add Alarm</button>
+
+        <template is="dom-repeat" items="{{alarms}}">
+            <ul>
+                <li><span>{{item.formattedDate}}</span> at <span>{{item.formattedTime}}</span></li>
+            </ul>
+        </template>
     </template>
 </dom-module>
 
@@ -17,18 +24,58 @@
     Polymer({
         is: 'clock-admin-app',
 
-        created: function () {
-            socket = io('http://localhost:8080');
+        properties: {
+            alarms: {
+                type: Array,
+                value: []
+            }
+        },
 
+        ready: function () {
+            var self = this;
+
+            socket = io('http://localhost:8080');
             socket.on('alarm', function (data) {
-                console.log(new Date(data.date));
+                var date = moment(data.date);
+
+                self.unshift('alarms', {
+                    date: date,
+                    formattedDate: date.format('MM-DD-YYYY'),
+                    formattedTime: date.format('hh:mm a')
+                });
             });
+
+            this.checkAlarms();
+        },
+
+        /*
+         * if there are alarms, check to see if they have passed. if they have,
+         * remove them from the alarms array
+         */
+        checkAlarms: function () {
+            var self = this;
+
+            setInterval(function () {
+                if (self.alarms.length) {
+                    var now = moment();
+
+                    self.alarms.forEach(function (alarm, index) {
+                        if (alarm.date.diff(now) <= 0) {
+                            self.removeAlarm(index);
+                        }
+                    });
+                }
+            }, 1000);
         },
 
         addAlarm: function () {
             socket.emit('createAlarm', {
-                date: new Date(this.date + 'T' + this.time + ':00')
+                date: this.date + ' ' + this.time
             });
+        },
+
+        removeAlarm: function (index) {
+            this.splice('alarms', index);
         }
     });
 
